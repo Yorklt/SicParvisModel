@@ -5,7 +5,7 @@ import bpy_extras
 bl_info = {
     "name": "Sic Parvis Model",
     "author": "Pon Pon Games",
-    "version": (0, 1, 1),
+    "version": (0, 1, 2),
     "blender": (3, 4, 0),
     "location": "File > Export",
     "description": "Export FBX files for specific RPG dev kit",
@@ -215,7 +215,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 
         # コレクション別モード
         if self.prop_collect == True:
-            for collection in bpy.data.collections:
+            collect_names = [collect.name for collect in bpy.data.collections]
+            for collect_name in collect_names:
+                collection = bpy.data.collections[collect_name]
 
                 # フルパスの生成
                 filename: str = filename_no_ext + "_" + collection.name + ".fbx"
@@ -225,8 +227,11 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
                 for object in bpy.data.objects:
                     object.select_set(False)
 
+                # コレクションをビューポート有効にセット
+                collection.hide_viewport = False
+
                 # コレクション内ののオブジェクトを選択
-                obj_names = [obj.name for obj in bpy.data.objects]
+                obj_names = [obj.name for obj in collection.all_objects]
                 for obj_name in obj_names:
                     object = bpy.data.objects[obj_name]
                     object.hide_viewport = False
