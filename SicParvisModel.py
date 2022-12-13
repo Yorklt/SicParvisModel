@@ -5,8 +5,8 @@ import bpy_extras
 bl_info = {
     "name": "Sic Parvis Model",
     "author": "Pon Pon Games",
-    "version": (0, 1, 0),
-    "blender": (3, 2, 0),
+    "version": (0, 1, 1),
+    "blender": (3, 4, 0),
     "location": "File > Export",
     "description": "Export FBX files for specific RPG dev kit",
     "warning": "Not enough debugging. This addon can cause crashes.",
@@ -184,7 +184,11 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
             target_filepath = os.path.join(folder_path, filename)
 
             # すべてのオブジェクトを選択
-            for object in bpy.data.objects:
+            # hide_viewportはbpy.data.objectsのイテレーション中に使うとクラッシュするので、
+            # オブジェクト名を介してアクセスする。
+            obj_names = [obj.name for obj in bpy.data.objects]
+            for obj_name in obj_names:
+                object = bpy.data.objects[obj_name]
                 object.hide_viewport = False
                 object.hide_set(False)
                 object.hide_select = False
@@ -222,7 +226,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
                     object.select_set(False)
 
                 # コレクション内ののオブジェクトを選択
-                for object in collection.all_objects:
+                obj_names = [obj.name for obj in bpy.data.objects]
+                for obj_name in obj_names:
+                    object = bpy.data.objects[obj_name]
                     object.hide_viewport = False
                     object.hide_set(False)
                     object.hide_select = False
@@ -258,7 +264,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
                 object.select_set(False)
 
             # アーマチュアだけを選択
-            for object in bpy.data.objects:
+            obj_names = [obj.name for obj in bpy.data.objects]
+            for obj_name in obj_names:
+                object = bpy.data.objects[obj_name]
                 if (object.type == "ARMATURE"):
                     object.hide_viewport = False
                     object.hide_set(False)
