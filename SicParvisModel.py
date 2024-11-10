@@ -50,17 +50,21 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 			)
 
 	# 出力設定
-	prop_separate: bpy.props.BoolProperty(
-		name = "アクションは別のFBXで出力",
-		description = "オブジェクトのFBXとアクションのFBXを別々に出力します。",
-		default = True,
+	prop_target_mode: bpy.props.EnumProperty(
+		name = "出力単位",
+		description = "FBXの出力単位を設定します。",
+		items = [
+			("ENTIRE", "シーン全体", "シーン全体を単体で出力します。<指定ファイル名>.fbxで出力します。"),
+			("COLLECTIONS", "コレクション別", "コレクションごとに複数FBXを出力します。<指定ファイル名+_+コレクション名>.fbxで出力します。"),
+			("TOP_OBJS", "各オブジェクト", "シーン直下の各オブジェクトを個別に複数出力します。<オブジェクト名>.fbxで出力します。"),
+		]
 	)
 
 	# 出力設定
-	prop_collect: bpy.props.BoolProperty(
-		name = "パーツを変えて複数出力",
-		description = "コレクションごとに複数FBXを出力します。<指定ファイル名+_+コレクション名>.fbxで出力します。",
-		default = False,
+	prop_separate: bpy.props.BoolProperty(
+		name = "アクションは別出力",
+		description = "オブジェクトのFBXとアクションのFBXを別々に出力します。",
+		default = True,
 	)
 
 	# 出力設定
@@ -81,7 +85,7 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 
 	# 出力設定
 	prop_ignore: bpy.props.BoolProperty(
-		name = "特定接頭辞で始まるオブジェクトを除外",
+		name = "接頭辞によるオブジェクト除外",
 		description = "特定の名前で始まるオブジェクトを出力から除外します。ダミーオブジェクトなど。",
 		default = True,
 	)
@@ -97,18 +101,16 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 	def draw(self, context):
 
 		box: bpy.types.UILayout = self.layout.box()
-		box.label(text = "出力設定")
+		box.prop(self, "prop_target_mode", text = "出力単位")
 		box.label(text = "")
-		box.label(text = "FBX出力方法")
-		box.prop(self, "prop_separate")
-		box.prop(self, "prop_collect")
+		box.prop(self, "prop_separate", text = "アクションは別のFBXで出力")
 		box.label(text = "アクションファイル接尾辞")
 		box.prop(self, "prop_anim_suffix")
 		box.label(text = "")
 		box.label(text = "スケール")
 		box.prop(self, "prop_scale")
 		box.label(text = "")
-		box.prop(self, "prop_ignore")
+		box.prop(self, "prop_ignore", text = "特定接頭辞で始まるオブジェクトを除外")
 		box.label(text = "除外オブジェクト接頭辞")
 		box.prop(self, "prop_ignore_prefix")
 
@@ -173,6 +175,12 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 		# 現在のフレームを0にする
 		bpy.context.scene.frame_current = 0
 
+		# コレクションをビューポート有効（液晶モニタマーク）にセット
+		collect_names = [collect.name for collect in bpy.data.collections]
+		for collect_name in collect_names:
+			collection = bpy.data.collections[collect_name]
+			collection.hide_viewport = False
+
 		# コレクションの可視状態（目マーク）を可視にする
 		# 2段までのネストに対応する
 		for view_layer in bpy.context.scene.view_layers:
@@ -186,8 +194,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 		# スケール
 		scale: float = self.prop_scale
 
-		# シーン全体モード
-		if self.prop_collect == False:
+		# シーン全体モード =============================
+
+		if self.prop_target_mode == "ENTIRE":
 			# フルパスの生成
 			filename: str = filename_no_ext + ".fbx"
 			target_filepath = os.path.join(folder_path, filename)
@@ -222,8 +231,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 				bake_anim = bake_anim
 				)
 
-		# コレクション別モード
-		if self.prop_collect == True:
+		# コレクション別モード==========================
+
+		if self.prop_target_mode == "COLLECTIONS":
 			collect_names = [collect.name for collect in bpy.data.collections]
 			for collect_name in collect_names:
 				collection = bpy.data.collections[collect_name]
@@ -236,10 +246,7 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 				for object in bpy.data.objects:
 					object.select_set(False)
 
-				# コレクションをビューポート有効にセット
-				collection.hide_viewport = False
-
-				# コレクション内ののオブジェクトを選択
+				# コレクション内のオブジェクトを選択
 				obj_names = [obj.name for obj in collection.all_objects]
 				for obj_name in obj_names:
 					object = bpy.data.objects[obj_name]
@@ -247,6 +254,82 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 					object.hide_set(False)
 					object.hide_select = False
 					object.select_set(True)
+
+				# 除外オブジェクトを選択解除
+				if self.prop_ignore == True:
+					for object in bpy.data.objects:
+						obj_name: str = object.name
+						if obj_name[:1] == self.prop_ignore_prefix:
+							object.select_set(False)
+
+				# アクション同梱ならベイクする
+				bake_anim: bool = False
+				if self.prop_separate == False:
+					bake_anim = True
+
+				# 出力実行
+				self.exec_export(
+					target_filepath = target_filepath,
+					scale = scale,
+					bake_anim = bake_anim
+					)
+
+		# トップオブジェクトモード======================
+
+		if self.prop_target_mode == "TOP_OBJS":
+
+			# すべてのオブジェクトを選択解除
+			for object in bpy.data.objects:
+				object.select_set(False)
+
+			# トップオブジェクトとその子孫を出力
+			obj_names = [obj.name for obj in bpy.data.objects]
+			for obj_name in obj_names:
+				object = bpy.data.objects[obj_name]
+
+				# トップオブジェクト以外を除外
+				if object.parent is not None:
+					continue
+
+				# エンプティ、メッシュ、アーマチュア以外を除外
+				is_valid_type = False
+				if object.type == "EMPTY":
+					is_valid_type = True
+				if object.type == "MESH":
+					is_valid_type = True
+				if object.type == "ARMATURE":
+					is_valid_type = True
+				if is_valid_type == False:
+					continue
+
+				# 除外オブジェクトを除外
+				if self.prop_ignore == True:
+					obj_name: str = object.name
+					if obj_name[:1] == self.prop_ignore_prefix:
+						continue
+
+				# フルパスの生成
+				filename: str = object.name + ".fbx"
+				target_filepath = os.path.join(folder_path, filename)
+
+				# トップと子孫オブジェクトを選択
+				for obj_name_2 in obj_names:
+					object2 = bpy.data.objects[obj_name_2]
+
+					is_child = False
+					if object2.name == obj_name:
+						is_child = True
+					else:
+						ob = object2
+						while ob.parent is not None:
+							ob = ob.parent
+							if ob.name == obj_name:
+								is_child = True
+					if is_child == True:
+						object2.hide_viewport = False
+						object2.hide_set(False)
+						object2.hide_select = False
+						object2.select_set(True)
 
 				# 除外オブジェクトを選択解除
 				if self.prop_ignore == True:
