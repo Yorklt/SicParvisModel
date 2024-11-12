@@ -278,39 +278,39 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 
 		if self.prop_target_mode == "TOP_OBJS":
 
-			# すべてのオブジェクトを選択解除
-			for object in bpy.data.objects:
-				object.select_set(False)
-
 			# トップオブジェクトとその子孫を出力
 			obj_names = [obj.name for obj in bpy.data.objects]
 			for obj_name in obj_names:
-				object = bpy.data.objects[obj_name]
+				target_obj = bpy.data.objects[obj_name]
 
 				# トップオブジェクト以外を除外
-				if object.parent is not None:
+				if target_obj.parent is not None:
 					continue
 
 				# エンプティ、メッシュ、アーマチュア以外を除外
 				is_valid_type = False
-				if object.type == "EMPTY":
+				if target_obj.type == "EMPTY":
 					is_valid_type = True
-				if object.type == "MESH":
+				if target_obj.type == "MESH":
 					is_valid_type = True
-				if object.type == "ARMATURE":
+				if target_obj.type == "ARMATURE":
 					is_valid_type = True
 				if is_valid_type == False:
 					continue
 
 				# 除外オブジェクトを除外
 				if self.prop_ignore == True:
-					obj_name: str = object.name
+					obj_name: str = target_obj.name
 					if obj_name[:1] == self.prop_ignore_prefix:
 						continue
 
 				# フルパスの生成
-				filename: str = object.name + ".fbx"
+				filename: str = target_obj.name + ".fbx"
 				target_filepath = os.path.join(folder_path, filename)
+
+				# すべてのオブジェクトを選択解除
+				for object in bpy.data.objects:
+					object.select_set(False)
 
 				# トップと子孫オブジェクトを選択
 				for obj_name_2 in obj_names:
