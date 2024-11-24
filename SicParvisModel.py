@@ -163,6 +163,32 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 			axis_up = "Y"
 			)
 
+
+	# 出力共通処理
+	def export_selected_objs(self, target_filepath: str, scale: float):
+
+		# 除外オブジェクトを選択解除
+		if self.prop_ignore == True:
+			for object in bpy.data.objects:
+				obj_name: str = object.name
+				if obj_name[:1] == self.prop_ignore_prefix:
+					object.select_set(False)
+
+		# アクション同梱ならベイクする
+		bake_anim: bool = False
+		if self.prop_separate == False:
+			# アクションがあるなら
+			if len(bpy.data.actions) > 0:
+				bake_anim = True
+
+		# 出力実行
+		self.exec_export(
+			target_filepath = target_filepath,
+			scale = scale,
+			bake_anim = bake_anim
+			)
+
+
 	# 出力実行ボタンを押した時の動作
 	def execute(self, context):
 		
@@ -212,24 +238,8 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 				object.hide_select = False
 				object.select_set(True)
 
-			# 除外オブジェクトを選択解除
-			if self.prop_ignore == True:
-				for object in bpy.data.objects:
-					obj_name: str = object.name
-					if obj_name[:1] == self.prop_ignore_prefix:
-						object.select_set(False)
-
-			# アクション同梱ならベイクする
-			bake_anim: bool = False
-			if self.prop_separate == False:
-				bake_anim = True
-
-			# 出力実行
-			self.exec_export(
-				target_filepath = target_filepath,
-				scale = scale,
-				bake_anim = bake_anim
-				)
+				# 出力
+				self.export_selected_objs(target_filepath, scale)
 
 		# コレクション別モード==========================
 
@@ -255,24 +265,9 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 					object.hide_select = False
 					object.select_set(True)
 
-				# 除外オブジェクトを選択解除
-				if self.prop_ignore == True:
-					for object in bpy.data.objects:
-						obj_name: str = object.name
-						if obj_name[:1] == self.prop_ignore_prefix:
-							object.select_set(False)
+				# 出力
+				self.export_selected_objs(target_filepath, scale)
 
-				# アクション同梱ならベイクする
-				bake_anim: bool = False
-				if self.prop_separate == False:
-					bake_anim = True
-
-				# 出力実行
-				self.exec_export(
-					target_filepath = target_filepath,
-					scale = scale,
-					bake_anim = bake_anim
-					)
 
 		# トップオブジェクトモード======================
 
@@ -331,27 +326,12 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 						object2.hide_select = False
 						object2.select_set(True)
 
-				# 除外オブジェクトを選択解除
-				if self.prop_ignore == True:
-					for object in bpy.data.objects:
-						obj_name: str = object.name
-						if obj_name[:1] == self.prop_ignore_prefix:
-							object.select_set(False)
-
-				# アクション同梱ならベイクする
-				bake_anim: bool = False
-				if self.prop_separate == False:
-					bake_anim = True
-
-				# 出力実行
-				self.exec_export(
-					target_filepath = target_filepath,
-					scale = scale,
-					bake_anim = bake_anim
-					)
+				# 出力
+				self.export_selected_objs(target_filepath, scale)
 
 		# アクションFBXの出力
-		if self.prop_separate == True:
+		if self.prop_separate == True and len(bpy.data.actions) > 0:
+
 			# フルパスの生成
 			filename: str = filename_no_ext + self.prop_anim_suffix + ".fbx"
 			target_filepath = os.path.join(folder_path, filename)
@@ -379,9 +359,11 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 
 		return {"FINISHED"}
 
+
 # メニューに項目を追加
 def add_item_to_menu(self, context):
 	self.layout.operator(UsualFBXExporter_OT_Exporter.bl_idname, text="FBX for RPG kit (.fbx)")
+
 
 # アドオンを有効にしたときにBlenderから呼ばれます。
 # このとき、bpy.dataとbpy.contextにアクセス不可。
@@ -390,12 +372,14 @@ def register():
 	bpy.utils.register_class(UsualFBXExporter_OT_Exporter)
 	bpy.types.TOPBAR_MT_file_export.append(add_item_to_menu)
 
+
 # アドオンを無効にしたときにBlenderから呼ばれます。
 # このとき、bpy.dataとbpy.contextにアクセス不可。
 def unregister():
 	print_log("unregister is called", 1)
 	bpy.types.TOPBAR_MT_file_export.remove(add_item_to_menu)
 	bpy.utils.unregister_class(UsualFBXExporter_OT_Exporter)
+
 
 # Blenderのテキストエディタで呼んだときの処理（デバッグ用）
 if __name__ == "__main__":
