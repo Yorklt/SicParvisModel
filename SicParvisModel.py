@@ -1,6 +1,7 @@
 import os
 import bpy
 import bpy_extras
+import mathutils
 
 bl_info = {
 	"name": "Sic Parvis Model",
@@ -84,6 +85,13 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 	)
 
 	# 出力設定
+	prop_reset_trans: bpy.props.BoolProperty(
+		name = "トランスフォームを原点にリセット",
+		description = "シーン直下の各オブジェクトのトランスフォームを原点にセットします。（出力設定が「各オブジェクト」の時のみ）",
+		default = True,
+	)
+
+	# 出力設定
 	prop_ignore: bpy.props.BoolProperty(
 		name = "接頭辞によるオブジェクト除外",
 		description = "特定の名前で始まるオブジェクトを出力から除外します。ダミーオブジェクトなど。",
@@ -109,6 +117,8 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 		box.label(text = "")
 		box.label(text = "スケール")
 		box.prop(self, "prop_scale")
+		box.label(text = "")
+		box.prop(self, "prop_reset_trans", text = "位置を原点にリセット")
 		box.label(text = "")
 		box.prop(self, "prop_ignore", text = "特定接頭辞で始まるオブジェクトを除外")
 		box.label(text = "除外オブジェクト接頭辞")
@@ -325,6 +335,12 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 						object2.hide_set(False)
 						object2.hide_select = False
 						object2.select_set(True)
+				
+				# 位置をゼロにリセット
+				if self.prop_reset_trans == True:
+					target_obj.location = mathutils.Vector((0.0, 0.0, 0.0))
+					target_obj.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
+					target_obj.scale = mathutils.Vector((1.0, 1.0, 1.0))
 
 				# 出力
 				self.export_selected_objs(target_filepath, scale)
