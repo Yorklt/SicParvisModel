@@ -33,6 +33,7 @@ class UsualFBXExporter_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.Expor
 	bl_idname = "usualfbxexporter.exporter"
 	bl_label = "Export FBX"
 	bl_options = {'UNDO', 'PRESET'}
+	bl_description = "出力開始。（注意: オブジェクトの選択状態などが変わります。）"
 
 	# 処理の実行可否判定の定義です。
 	# Objectモードのときだけ実行可能です。
